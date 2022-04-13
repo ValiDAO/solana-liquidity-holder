@@ -18,7 +18,7 @@ dev-build = []
 borsh = "0.9.3"
 borsh-derive = "0.9.1"
 solana-program = "~1.8.14"
-spl-token = { version = "=3.1.1", features = ["no-entrypoint"] }
+spl-token = { version = "=3.2.0", features = ["no-entrypoint"] }
 
 [dev-dependencies]
 solana-program-test = "~1.8.14"
