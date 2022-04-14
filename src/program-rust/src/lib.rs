@@ -136,6 +136,7 @@ pub fn _process_staking_instruction(
         msg!("Staking account does not have the correct program id");
         return Err(ProgramError::IncorrectProgramId);
     }
+    // POOL = DjHnG6xbtxyT297XZWKyqxPsAngtoy9GkuehavoGUcY4
     // let expected_pool_address = &Pubkey::create_program_address(
     //     &[POOL_ADDRESS_SEED, &[bump_seed]],
     //     program_id
@@ -214,10 +215,12 @@ pub fn _process_withdraw_interest_instruction(
 
     match withdraw_strategy {
         WithdrawStrategy::InterestOnly => {
+            staking_info.serialize(&mut &mut staking_acc.data.borrow_mut()[..])?;
             Ok(accumulated_interest)
         },
         WithdrawStrategy::Compound => {
             staking_info.token_amount += accumulated_interest;
+            staking_info.serialize(&mut &mut staking_acc.data.borrow_mut()[..])?;
             Ok(0)
         },
         WithdrawStrategy::CloseAccount => {
@@ -227,6 +230,7 @@ pub fn _process_withdraw_interest_instruction(
                 let total_to_withdraw = staking_info.token_amount + accumulated_interest;
                 staking_info.token_amount = 0;
                 staking_info.last_withdraw_date = now;
+                staking_info.serialize(&mut &mut staking_acc.data.borrow_mut()[..])?;
                 Ok(total_to_withdraw)
             }
         }
@@ -251,6 +255,7 @@ pub fn process_instruction(
             let owner_account = next_account_info(account_info_iter)?;
             let owner_token_account = next_account_info(account_info_iter)?;
             let pool_token_account = next_account_info(account_info_iter)?;
+            let token_program = next_account_info(account_info_iter)?;
             _process_staking_instruction(
                 program_id,
                 staking_account,
@@ -261,7 +266,6 @@ pub fn process_instruction(
                 Clock::get()?.unix_timestamp,
                 duration,
                 bump_seed)?;
-            let token_program = next_account_info(account_info_iter)?;
             if token_program.key != &SPL_TOKEN_PROGRAM_ID {
                 return Err(ProgramError::IncorrectProgramId);
             }
@@ -291,6 +295,8 @@ pub fn process_instruction(
             let owner_account = next_account_info(account_info_iter)?;
             let owner_token_account = next_account_info(account_info_iter)?;
             let pool_token_account = next_account_info(account_info_iter)?;
+            let token_program = next_account_info(account_info_iter)?;
+            let pool_manager_account = next_account_info(account_info_iter)?;
             let amount = _process_withdraw_interest_instruction(
                 program_id,
                 staking_account,
@@ -305,8 +311,6 @@ pub fn process_instruction(
                     Instruction::CloseAccount{..} => WithdrawStrategy::CloseAccount,
                     _ => unreachable!(),
                 })?;
-            let token_program = next_account_info(account_info_iter)?;
-            let pool_manager_account = next_account_info(account_info_iter)?;
             if token_program.key != &SPL_TOKEN_PROGRAM_ID {
                 return Err(ProgramError::IncorrectProgramId);
             }
